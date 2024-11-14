@@ -1,0 +1,76 @@
+import tkinter as tk
+from voronoi import Voronoi
+
+class MainWindow:
+    RADIUS = 3
+    LOCK_FLAG = False
+    
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Fortune's Voronoi")
+
+        self.frmMain = tk.Frame(self.master, relief=tk.RAISED, borderwidth=1)
+        self.frmMain.pack(fill=tk.BOTH, expand=1)
+
+        self.w = tk.Canvas(self.frmMain, width=500, height=500)
+        self.w.config(background='white')
+        self.w.bind('<Button-1>', self.onClick)  # Single-click to add points
+        self.w.pack()
+
+        self.frmButton = tk.Frame(self.master)
+        self.frmButton.pack()
+        
+        self.btnCalculate = tk.Button(self.frmButton, text='Calculate', width=25, command=self.onClickCalculate)
+        self.btnCalculate.pack(side=tk.LEFT)
+        
+        self.btnClear = tk.Button(self.frmButton, text='Clear', width=25, command=self.onClickClear)
+        self.btnClear.pack(side=tk.LEFT)
+        
+        self.points = []  # To store points for Voronoi calculation
+
+    def onClickCalculate(self):
+        if not self.LOCK_FLAG:
+            self.LOCK_FLAG = True
+            self.w.delete("lines")  # Clear previously drawn Voronoi lines (tagged as 'lines')
+            self.w.delete("circle")
+
+            points = self.points.copy()  # Use stored points for the calculation
+            
+            vp = Voronoi(points)
+            vp.process()
+            lines = vp.get_output()
+            self.drawLinesOnCanvas(lines)
+
+            largest_circle = vp.find_largest_empty_circle()
+            self.drawCircleOnCanvas(largest_circle)
+
+            self.LOCK_FLAG = False  # Allow adding new points after calculation
+            
+            #print(lines)
+
+    def onClickClear(self):
+        self.LOCK_FLAG = False
+        self.w.delete("all")
+        self.points.clear()
+
+    def onClick(self, event):
+        if not self.LOCK_FLAG:
+            self.points.append((event.x, event.y))
+            self.w.create_oval(event.x-self.RADIUS, event.y-self.RADIUS, event.x+self.RADIUS, event.y+self.RADIUS, fill="black")
+
+    def drawLinesOnCanvas(self, lines):
+        for l in lines:
+            self.w.create_line(l[0], l[1], l[2], l[3], fill='blue', tags="lines")
+
+    def drawCircleOnCanvas(self, largest_circle):
+        if largest_circle:
+            ox, oy, radius = largest_circle
+            self.w.create_oval(ox - radius, oy - radius, ox + radius, oy + radius, outline="red", width=2, tags="circle")
+
+def main(): 
+    root = tk.Tk()
+    app = MainWindow(root)
+    root.mainloop()
+
+if __name__ == '__main__':
+    main()
