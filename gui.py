@@ -52,27 +52,30 @@ class MainWindow:
 
     def onClickCalculate(self):
         if not self.points:
-            print("No points to calculate Voronoi diagram")
+            tk.messagebox.showwarning("No Points", "No points to calculate Voronoi diagram")
             return
 
         if not self.LOCK_FLAG:
             self.LOCK_FLAG = True
-            self.w.delete("lines")  # Clear previously drawn Voronoi lines (tagged as 'lines')
+            self.w.delete("lines")
             self.w.delete("circle")
 
-            points = self.points.copy()  # Use stored points for the calculation
+            points = self.points.copy()
             
-            vp = Voronoi(points)
-            vp.process()
-            lines = vp.get_output()
-            if lines:
-                self.drawLinesOnCanvas(lines)
+            try:
+                vp = Voronoi(points)
+                vp.process()
+                lines = vp.get_output()
+                if lines:
+                    self.drawLinesOnCanvas(lines)
 
-            largest_circle = vp.find_largest_empty_circle()
-            if largest_circle:
-                self.drawCircleOnCanvas(largest_circle)
-
-            self.LOCK_FLAG = False  # Allow adding new points after calculation
+                largest_circle = vp.find_largest_empty_circle()
+                if largest_circle:
+                    self.drawCircleOnCanvas(largest_circle)
+            except Exception as e:
+                tk.messagebox.showerror("Calculation Error", f"An error occurred during calculation:\n\n{str(e)}")
+            finally:
+                self.LOCK_FLAG = False
 
     def onClickClear(self):
         self.LOCK_FLAG = False
@@ -87,15 +90,25 @@ class MainWindow:
     def onClickLoad(self):
         filename = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
         if filename:
-            self.onClickClear()  # Clear existing points
+            self.onClickClear()
+            error_messages = []
             with open(filename, 'r') as file:
-                for line in file:
+                for line_num, line in enumerate(file, 1):
                     try:
-                        x, y = map(int, line.strip().split())
+                        parts = line.strip().split()
+                        if len(parts) != 2:
+                            raise ValueError(f"Line {line_num}: Expected 2 values, got {len(parts)}")
+                        x, y = map(int, parts)
+                        if x < 0 or x > 500 or y < 0 or y > 500:
+                            raise ValueError(f"Line {line_num}: Coordinates out of bounds (0-500)")
                         self.points.append((x, y))
                         self.w.create_oval(x-self.RADIUS, y-self.RADIUS, x+self.RADIUS, y+self.RADIUS, fill="black")
-                    except ValueError:
-                        print(f"Ignoring invalid line: {line.strip()}")
+                    except ValueError as e:
+                        error_messages.append(str(e))
+
+            if error_messages:
+                error_text = "\n".join(error_messages)
+                tk.messagebox.showerror("Input Error", f"The following errors occurred:\n\n{error_text}")
 
     def drawLinesOnCanvas(self, lines):
         for l in lines:
