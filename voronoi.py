@@ -132,7 +132,7 @@ class Voronoi:
             
             # insert new segment between p and i
             x = self.x0
-            y = (i.pnext.p.y + i.p.y) / 2.0;
+            y = (i.pnext.p.y + i.p.y) / 2.0
             start = Point(x, y)
 
             seg = Segment(start)
@@ -236,7 +236,12 @@ class Voronoi:
         for o in self.output:
             p0 = o.start
             p1 = o.end
-            res.append((p0.x, p0.y, p1.x, p1.y))
+            if p0 is not None and p1 is not None:
+                res.append((p0.x, p0.y, p1.x, p1.y))
+            elif p0 is not None:
+                # If only start point exists, use it for both start and end
+                res.append((p0.x, p0.y, p0.x, p0.y))
+            # If neither point exists, we skip this edge
         return res
 
     def find_largest_empty_circle(self):
@@ -251,7 +256,11 @@ class Voronoi:
                 for p3 in points_list:
                     if p3 == p1 or p3 == p2: continue
                     
-                    ox, oy, radius = self.circumcenter(p1, p2, p3)
+                    result = self.circumcenter(p1, p2, p3)
+                    if result is None:
+                        continue  # Skip collinear points
+                    
+                    ox, oy, radius = result
                     
                     is_empty = True
                     for p in points_list:
@@ -273,6 +282,9 @@ class Voronoi:
 
         # Compute the determinant D
         D = 2 * ((x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3))
+
+        if abs(D) < 1e-6:  # Check if D is very close to zero
+            return None  # Return None for collinear points
 
         # Compute the circumcenter (ox, oy)
         ox = ((x1**2 + y1**2) * (y2 - y3) + (x2**2 + y2**2) * (y3 - y1) + (x3**2 + y3**2) * (y1 - y2)) / D

@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog
 from voronoi import Voronoi
 
 class MainWindow:
@@ -26,9 +27,34 @@ class MainWindow:
         self.btnClear = tk.Button(self.frmButton, text='Clear', width=25, command=self.onClickClear)
         self.btnClear.pack(side=tk.LEFT)
         
+        self.btnLoad = tk.Button(self.frmButton, text='Load Points', width=25, command=self.onClickLoad)
+        self.btnLoad.pack(side=tk.LEFT)
+        
         self.points = []  # To store points for Voronoi calculation
 
+    # def onClickCalculate(self):
+    #     if not self.LOCK_FLAG:
+    #         self.LOCK_FLAG = True
+    #         self.w.delete("lines")  # Clear previously drawn Voronoi lines (tagged as 'lines')
+    #         self.w.delete("circle")
+
+    #         points = self.points.copy()  # Use stored points for the calculation
+            
+    #         vp = Voronoi(points)
+    #         vp.process()
+    #         lines = vp.get_output()
+    #         self.drawLinesOnCanvas(lines)
+
+    #         largest_circle = vp.find_largest_empty_circle()
+    #         self.drawCircleOnCanvas(largest_circle)
+
+    #         self.LOCK_FLAG = False  # Allow adding new points after calculation
+
     def onClickCalculate(self):
+        if not self.points:
+            print("No points to calculate Voronoi diagram")
+            return
+
         if not self.LOCK_FLAG:
             self.LOCK_FLAG = True
             self.w.delete("lines")  # Clear previously drawn Voronoi lines (tagged as 'lines')
@@ -39,14 +65,14 @@ class MainWindow:
             vp = Voronoi(points)
             vp.process()
             lines = vp.get_output()
-            self.drawLinesOnCanvas(lines)
+            if lines:
+                self.drawLinesOnCanvas(lines)
 
             largest_circle = vp.find_largest_empty_circle()
-            self.drawCircleOnCanvas(largest_circle)
+            if largest_circle:
+                self.drawCircleOnCanvas(largest_circle)
 
             self.LOCK_FLAG = False  # Allow adding new points after calculation
-            
-            #print(lines)
 
     def onClickClear(self):
         self.LOCK_FLAG = False
@@ -57,6 +83,19 @@ class MainWindow:
         if not self.LOCK_FLAG:
             self.points.append((event.x, event.y))
             self.w.create_oval(event.x-self.RADIUS, event.y-self.RADIUS, event.x+self.RADIUS, event.y+self.RADIUS, fill="black")
+
+    def onClickLoad(self):
+        filename = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+        if filename:
+            self.onClickClear()  # Clear existing points
+            with open(filename, 'r') as file:
+                for line in file:
+                    try:
+                        x, y = map(int, line.strip().split())
+                        self.points.append((x, y))
+                        self.w.create_oval(x-self.RADIUS, y-self.RADIUS, x+self.RADIUS, y+self.RADIUS, fill="black")
+                    except ValueError:
+                        print(f"Ignoring invalid line: {line.strip()}")
 
     def drawLinesOnCanvas(self, lines):
         for l in lines:
