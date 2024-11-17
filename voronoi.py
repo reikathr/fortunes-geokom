@@ -1,10 +1,12 @@
 import random
 import math
-
+from itertools import combinations, filterfalse
+from typing import List, Tuple, Optional
 from datatypes import Point, Event, Arc, Segment, PriorityQueue
 
 class Voronoi:
     def __init__(self, points):
+<<<<<<< HEAD
         self.output = []  # list of line segments
         self.arc = None  # binary tree for parabola arcs
 
@@ -22,33 +24,59 @@ class Voronoi:
         # insert points to site event
         for pts in points:
             point = Point(pts[0], pts[1])
+=======
+        self.output = []
+        self.arc = None
+        self.points = PriorityQueue()
+        self.event = PriorityQueue()
+        self.points_copy = []
+        
+        # Inisialisasi bounding box
+        self.x0 = self.x1 = -50.0
+        self.y0 = self.y1 = 550.0
+        
+        # Proses input points
+        for x, y in points:
+            point = Point(x, y)
+>>>>>>> 98b9ffd45aca3263d1ab60f71d9a073aaab3f465
             self.points.push(point)
             self.points_copy.append(point)
-            # keep track of bounding box size
-            if point.x < self.x0: self.x0 = point.x
-            if point.y < self.y0: self.y0 = point.y
-            if point.x > self.x1: self.x1 = point.x
-            if point.y > self.y1: self.y1 = point.y
-
-        # add margins to the bounding box
+            
+            # Update bounding box
+            self.x0 = min(self.x0, point.x)
+            self.y0 = min(self.y0, point.y)
+            self.x1 = max(self.x1, point.x)
+            self.y1 = max(self.y1, point.y)
+        
+        # Tambahkan margin ke bounding box
         dx = (self.x1 - self.x0 + 1) / 5.0
         dy = (self.y1 - self.y0 + 1) / 5.0
-        self.x0 = self.x0 - dx
-        self.x1 = self.x1 + dx
-        self.y0 = self.y0 - dy
-        self.y1 = self.y1 + dy
-
+        self.x0 -= dx
+        self.x1 += dx
+        self.y0 -= dy
+        self.y1 += dy
+        
     def process(self):
+        """Proses utama untuk membuat diagram Voronoi."""
         while not self.points.empty():
+<<<<<<< HEAD
             if not self.event.empty() and (self.event.top().x <= self.points.top().x):
                 self.process_event()  # handle circle event
             else:
                 self.process_point()  # handle site event
 
         # after all points, process remaining circle events
+=======
+            if not self.event.empty() and self.event.top().x <= self.points.top().x:
+                self.process_event()
+            else:
+                self.process_point()
+        
+        # Proses sisa circle events
+>>>>>>> 98b9ffd45aca3263d1ab60f71d9a073aaab3f465
         while not self.event.empty():
             self.process_event()
-
+            
         self.finish_edges()
 
     def process_event(self):
@@ -219,7 +247,7 @@ class Voronoi:
             z0 = 2.0 * (p0.x - l)
             z1 = 2.0 * (p1.x - l)
 
-            a = 1.0/z0 - 1.0/z1;
+            a = 1.0/z0 - 1.0/z1
             b = -2.0 * (p0.y/z0 - p1.y/z1)
             c = 1.0 * (p0.y**2 + p0.x**2 - l**2) / z0 - 1.0 * (p1.y**2 + p1.x**2 - l**2) / z1
 
@@ -238,20 +266,12 @@ class Voronoi:
                 i.s1.finish(p)
             i = i.pnext
 
-    def get_output(self):
-        res = []
-        for o in self.output:
-            p0 = o.start
-            p1 = o.end
-            if p0 is not None and p1 is not None:
-                res.append((p0.x, p0.y, p1.x, p1.y))
-            elif p0 is not None:
-                # If only start point exists, use it for both start and end
-                res.append((p0.x, p0.y, p0.x, p0.y))
-            # If neither point exists, we skip this edge
-        return res
+    def get_output(self) -> List[Tuple[float, float, float, float]]:
+        return [(o.start.x, o.start.y, o.end.x, o.end.y) if o.end else 
+                (o.start.x, o.start.y, o.start.x, o.start.y) 
+                for o in self.output if o.start]
 
-    def find_largest_empty_circle(self):
+    def find_largest_empty_circle(self) -> List[Tuple[float, float, float]]:
         max_radius = 0
         largest_circles = []  # To store all largest circles
 
