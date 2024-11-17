@@ -1,7 +1,12 @@
 import heapq
 from collections import namedtuple
 
-Point = namedtuple('Point', ['x', 'y'])
+class Point:
+    __slots__ = ['x', 'y']
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
 class Event:
     __slots__ = ['x', 'p', 'a', 'valid']
@@ -49,6 +54,7 @@ class PriorityQueue:
     def push(self, item):
         if item in self.entry_finder:
             self.remove_entry(item)
+
         entry = [item.x, self.counter, item]
         self.entry_finder[item] = entry
         heapq.heappush(self.pq, entry)
