@@ -1,5 +1,8 @@
 # Change for points needed
-points = 30
+import random
+
+
+points = 50
 
 coordinates = [(random.randint(0, 500), random.randint(0, 500)) for i in range(points)]
 

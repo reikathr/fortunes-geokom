@@ -9,6 +9,20 @@ class MainWindow:
     def __init__(self, master):
         self.master = master
         self.master.title("Fortune's Voronoi")
+        
+        # Mengatur ukuran window menjadi fixed/statis
+        self.master.resizable(False, False)  # Menonaktifkan kemampuan resize window
+        
+        # Mendapatkan ukuran layar
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        
+        # Menghitung posisi x dan y untuk menempatkan window di tengah
+        x = (screen_width/2) - (500/2)
+        y = (screen_height/2) - (500/2)
+        
+        # Mengatur geometri window: 'widthxheight+x+y'
+        self.master.geometry('500x540+%d+%d' % (x, y))
 
         self.frmMain = tk.Frame(self.master, relief=tk.RAISED, borderwidth=1)
         self.frmMain.pack(fill=tk.BOTH, expand=1)
@@ -30,26 +44,9 @@ class MainWindow:
         self.btnLoad = tk.Button(self.frmButton, text='Load Points', width=25, command=self.onClickLoad)
         self.btnLoad.pack(side=tk.LEFT)
         
-        self.points = []  # To store points for Voronoi calculation
+        self.points = []   # To store points for Voronoi calculation
 
-    # def onClickCalculate(self):
-    #     if not self.LOCK_FLAG:
-    #         self.LOCK_FLAG = True
-    #         self.w.delete("lines")  # Clear previously drawn Voronoi lines (tagged as 'lines')
-    #         self.w.delete("circle")
-
-    #         points = self.points.copy()  # Use stored points for the calculation
-            
-    #         vp = Voronoi(points)
-    #         vp.process()
-    #         lines = vp.get_output()
-    #         self.drawLinesOnCanvas(lines)
-
-    #         largest_circle = vp.find_largest_empty_circle()
-    #         self.drawCircleOnCanvas(largest_circle)
-
-    #         self.LOCK_FLAG = False  # Allow adding new points after calculation
-
+    
     def onClickCalculate(self):
         if not self.points:
             tk.messagebox.showwarning("No Points", "No points to calculate Voronoi diagram")
@@ -61,7 +58,8 @@ class MainWindow:
             self.w.delete("circle")
 
             points = self.points.copy()
-            
+            epsilon = 1e-6
+            points = [(x, y + epsilon * i) for i, (x, y) in enumerate(points)]
             try:
                 vp = Voronoi(points)
                 vp.process()
@@ -92,24 +90,37 @@ class MainWindow:
         if filename:
             self.onClickClear()
             error_messages = []
+            temp_points = []  # Temporary list to store points before sorting
+            
+            # Read and validate points
             with open(filename, 'r') as file:
                 for line_num, line in enumerate(file, 1):
                     try:
                         parts = line.strip().split()
                         if len(parts) != 2:
                             raise ValueError(f"Line {line_num}: Expected 2 values, got {len(parts)}")
-                        x, y = map(int, parts)
+                        x, y = map(float, parts)
                         if x < 0 or x > 500 or y < 0 or y > 500:
                             raise ValueError(f"Line {line_num}: Coordinates out of bounds (0-500)")
-                        self.points.append((x, y))
-                        self.w.create_oval(x-self.RADIUS, y-self.RADIUS, x+self.RADIUS, y+self.RADIUS, fill="black")
+                        temp_points.append((x, y))
                     except ValueError as e:
                         error_messages.append(str(e))
-
+            
+            # Sort points first by x, then by y
+            temp_points.sort(key=lambda point: (point[0], point[1]))
+            
+            # Clear existing points and add sorted points
+            self.points = []
+            for x, y in temp_points:
+                self.points.append((x, y))
+                self.w.create_oval(x-self.RADIUS, y-self.RADIUS, 
+                                x+self.RADIUS, y+self.RADIUS, 
+                                fill="black")
+            
             if error_messages:
                 error_text = "\n".join(error_messages)
                 tk.messagebox.showerror("Input Error", f"The following errors occurred:\n\n{error_text}")
-
+                
     def drawLinesOnCanvas(self, lines):
         for l in lines:
             self.w.create_line(l[0], l[1], l[2], l[3], fill='blue', tags="lines")
