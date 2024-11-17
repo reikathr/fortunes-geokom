@@ -5,12 +5,13 @@ from datatypes import Point, Event, Arc, Segment, PriorityQueue
 
 class Voronoi:
     def __init__(self, points):
-        self.output = [] # list of line segment
+        self.output = []  # list of line segments
         self.arc = None  # binary tree for parabola arcs
 
-        self.points = PriorityQueue() # site events
-        self.event = PriorityQueue() # circle events
+        self.points = PriorityQueue()  # site events
+        self.event = PriorityQueue()  # circle events
         self.points_copy = []  # Store the original points
+        self.voronoi_vertices = []  # Store Voronoi vertices
 
         # bounding box
         self.x0 = -50.0
@@ -40,21 +41,15 @@ class Voronoi:
     def process(self):
         while not self.points.empty():
             if not self.event.empty() and (self.event.top().x <= self.points.top().x):
-                self.process_event() # handle circle event
+                self.process_event()  # handle circle event
             else:
-                self.process_point() # handle site event
+                self.process_point()  # handle site event
 
         # after all points, process remaining circle events
         while not self.event.empty():
             self.process_event()
 
         self.finish_edges()
-
-    def process_point(self):
-        # get next event from site pq
-        p = self.points.pop()
-        # add new arc (parabola)
-        self.arc_insert(p)
 
     def process_event(self):
         # get next event from circle pq
@@ -65,22 +60,34 @@ class Voronoi:
             s = Segment(e.p)
             self.output.append(s)
 
+            # Add the event point (Voronoi vertex) to the list
+            self.voronoi_vertices.append(e.p)
+
             # remove associated arc (parabola)
             a = e.a
-            if a.pprev != None:
+            if a.pprev is not None:
                 a.pprev.pnext = a.pnext
                 a.pprev.s1 = s
-            if a.pnext != None:
+            if a.pnext is not None:
                 a.pnext.pprev = a.pprev
                 a.pnext.s0 = s
 
             # finish the edges before and after a
-            if a.s0 != None: a.s0.finish(e.p)
-            if a.s1 != None: a.s1.finish(e.p)
+            if a.s0 is not None: a.s0.finish(e.p)
+            if a.s1 is not None: a.s1.finish(e.p)
 
             # recheck circle events on either side of p
-            if a.pprev != None: self.check_circle_event(a.pprev, e.x)
-            if a.pnext != None: self.check_circle_event(a.pnext, e.x)
+            if a.pprev is not None: self.check_circle_event(a.pprev, e.x)
+            if a.pnext is not None: self.check_circle_event(a.pnext, e.x)
+
+    def get_voronoi_vertices(self):
+        return [(v.x, v.y) for v in self.voronoi_vertices]
+
+    def process_point(self):
+        # get next event from site pq
+        p = self.points.pop()
+        # add new arc (parabola)
+        self.arc_insert(p)
 
     def arc_insert(self, p):
         if self.arc is None:
@@ -248,53 +255,30 @@ class Voronoi:
         max_radius = 0
         largest_circles = []  # To store all largest circles
 
-        points_list = self.points_copy
-
-        for p1 in points_list:
-            for p2 in points_list:
-                if p1 == p2: continue
-                for p3 in points_list:
-                    if p3 == p1 or p3 == p2: continue
-                    
-                    result = self.circumcenter(p1, p2, p3)
-                    if result is None:
-                        continue  # Skip collinear points
-                    
-                    ox, oy, radius = result
-                    
-                    is_empty = True
-                    for p in points_list:
-                        if p != p1 and p != p2 and p != p3:
-                            distance = math.sqrt((p.x - ox) ** 2 + (p.y - oy) ** 2)
-                            if distance < radius:
-                                is_empty = False
-                                break
-                    
-                    if is_empty:
-                        if radius > max_radius:
-                            max_radius = radius
-                            largest_circles = [(ox, oy, radius)]
-                        elif radius == max_radius:
-                            largest_circles.append((ox, oy, radius))
+        # Iterate over all Voronoi vertices (the ones where three or more edges meet)
+        for vertex in self.get_voronoi_vertices():
+            ox, oy = vertex[0], vertex[1]
+            radius = self.distance_to_closest_site(ox, oy)
+            
+            # Check if the circle is empty (no points inside)
+            is_empty = True
+            for p in self.points_copy:
+                if self.distance(ox, oy, p.x, p.y) < radius:
+                    is_empty = False
+                    break
+            
+            if is_empty and radius > max_radius:
+                max_radius = radius
+                largest_circles = [(ox, oy, radius)]
+            elif is_empty and radius == max_radius:
+                largest_circles.append((ox, oy, radius))
 
         return largest_circles
 
-    def circumcenter(self, p1, p2, p3):
-        x1, y1 = p1.x, p1.y
-        x2, y2 = p2.x, p2.y
-        x3, y3 = p3.x, p3.y
+    def distance_to_closest_site(self, ox, oy):
+        # Implement a method to find the closest site point to the given point (ox, oy)
+        return min([self.distance(ox, oy, p.x, p.y) for p in self.points_copy])
 
-        # Compute the determinant D
-        D = 2 * ((x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3))
-
-        if abs(D) < 1e-6:  # Check if D is very close to zero
-            return None  # Return None for collinear points
-
-        # Compute the circumcenter (ox, oy)
-        ox = ((x1**2 + y1**2) * (y2 - y3) + (x2**2 + y2**2) * (y3 - y1) + (x3**2 + y3**2) * (y1 - y2)) / D
-        oy = ((x1**2 + y1**2) * (x3 - x2) + (x2**2 + y2**2) * (x1 - x3) + (x3**2 + y3**2) * (x2 - x1)) / D
-
-        # Compute the radius (distance from circumcenter to any point)
-        radius = math.sqrt((ox - x1)**2 + (oy - y1)**2)
-
-        return ox, oy, radius
+    def distance(self, x1, y1, x2, y2):
+        # Euclidean distance between two points
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
