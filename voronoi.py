@@ -21,12 +21,8 @@ class Voronoi:
             point = Point(x, y)
             self.points.push(point)
             self.points_copy.append(point)
-            
-            # Update bounding box
-            self.x0 = min(self.x0, point.x)
-            self.y0 = min(self.y0, point.y)
-            self.x1 = max(self.x1, point.x)
-            self.y1 = max(self.y1, point.y)
+            self.x0, self.y0 = min(self.x0, x), min(self.y0, y)
+            self.x1, self.y1 = max(self.x1, x), max(self.y1, y)
         
         # Tambahkan margin ke bounding box
         dx = (self.x1 - self.x0 + 1) / 5.0
