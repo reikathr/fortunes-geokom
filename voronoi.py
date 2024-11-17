@@ -1,7 +1,5 @@
-import random
 import math
-from itertools import combinations, filterfalse
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from datatypes import Point, Event, Arc, Segment, PriorityQueue
 
 class Voronoi:
@@ -15,22 +13,19 @@ class Voronoi:
         self.voronoi_vertices = []  # Store Voronoi vertices
 
         # bounding box
-        self.x0 = -50.0
-        self.x1 = -50.0
-        self.y0 = 550.0
-        self.y1 = 550.0
+        self.x0, self.x1 = -50.0, -50.0
+        self.y0, self.y1 = 550.0, 550.0
 
         # insert points to site event
-        for pts in points:
-            point = Point(pts[0], pts[1])
+        for x,y in points:
+            point = Point(x, y)
             self.points.push(point)
             self.points_copy.append(point)
             self.x0, self.y0 = min(self.x0, x), min(self.y0, y)
             self.x1, self.y1 = max(self.x1, x), max(self.y1, y)
         
         # Tambahkan margin ke bounding box
-        dx = (self.x1 - self.x0 + 1) / 5.0
-        dy = (self.y1 - self.y0 + 1) / 5.0
+        dx , dy = (self.x1 - self.x0 + 1) / 5.0, (self.y1 - self.y0 + 1) / 5.0
         self.x0 -= dx
         self.x1 += dx
         self.y0 -= dy
