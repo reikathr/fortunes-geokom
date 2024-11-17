@@ -58,7 +58,7 @@ class MainWindow:
             self.w.delete("circle")
 
             points = self.points.copy()
-            epsilon = 1e-6
+            epsilon = 1e-15
             points = [(x, y + epsilon * i) for i, (x, y) in enumerate(points)]
             try:
                 vp = Voronoi(points)
