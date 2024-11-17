@@ -6,19 +6,23 @@ from datatypes import Point, Event, Arc, Segment, PriorityQueue
 
 class Voronoi:
     def __init__(self, points):
-        self.output = []
-        self.arc = None
-        self.points = PriorityQueue()
-        self.event = PriorityQueue()
-        self.points_copy = []
-        
-        # Inisialisasi bounding box
-        self.x0 = self.x1 = -50.0
-        self.y0 = self.y1 = 550.0
-        
-        # Proses input points
-        for x, y in points:
-            point = Point(x, y)
+        self.output = []  # list of line segments
+        self.arc = None  # binary tree for parabola arcs
+
+        self.points = PriorityQueue()  # site events
+        self.event = PriorityQueue()  # circle events
+        self.points_copy = []  # Store the original points
+        self.voronoi_vertices = []  # Store Voronoi vertices
+
+        # bounding box
+        self.x0 = -50.0
+        self.x1 = -50.0
+        self.y0 = 550.0
+        self.y1 = 550.0
+
+        # insert points to site event
+        for pts in points:
+            point = Point(pts[0], pts[1])
             self.points.push(point)
             self.points_copy.append(point)
             self.x0, self.y0 = min(self.x0, x), min(self.y0, y)
@@ -46,12 +50,6 @@ class Voronoi:
             
         self.finish_edges()
 
-    def process_point(self):
-        # get next event from site pq
-        p = self.points.pop()
-        # add new arc (parabola)
-        self.arc_insert(p)
-
     def process_event(self):
         # get next event from circle pq
         e = self.event.pop()
@@ -61,22 +59,34 @@ class Voronoi:
             s = Segment(e.p)
             self.output.append(s)
 
+            # Add the event point (Voronoi vertex) to the list
+            self.voronoi_vertices.append(e.p)
+
             # remove associated arc (parabola)
             a = e.a
-            if a.pprev != None:
+            if a.pprev is not None:
                 a.pprev.pnext = a.pnext
                 a.pprev.s1 = s
-            if a.pnext != None:
+            if a.pnext is not None:
                 a.pnext.pprev = a.pprev
                 a.pnext.s0 = s
 
             # finish the edges before and after a
-            if a.s0 != None: a.s0.finish(e.p)
-            if a.s1 != None: a.s1.finish(e.p)
+            if a.s0 is not None: a.s0.finish(e.p)
+            if a.s1 is not None: a.s1.finish(e.p)
 
             # recheck circle events on either side of p
-            if a.pprev != None: self.check_circle_event(a.pprev, e.x)
-            if a.pnext != None: self.check_circle_event(a.pnext, e.x)
+            if a.pprev is not None: self.check_circle_event(a.pprev, e.x)
+            if a.pnext is not None: self.check_circle_event(a.pnext, e.x)
+
+    def get_voronoi_vertices(self):
+        return [(v.x, v.y) for v in self.voronoi_vertices]
+
+    def process_point(self):
+        # get next event from site pq
+        p = self.points.pop()
+        # add new arc (parabola)
+        self.arc_insert(p)
 
     def arc_insert(self, p):
         if self.arc is None:
@@ -234,59 +244,32 @@ class Voronoi:
 
     def find_largest_empty_circle(self) -> List[Tuple[float, float, float]]:
         max_radius = 0
-        largest_circles = []
-        points = self.points_copy
-        
-        # Generate semua kombinasi 3 titik yang mungkin
-        point_combinations = combinations(points, 3)
-        
-        for p1, p2, p3 in point_combinations:
-            # Hitung circumcenter
-            result = self.circumcenter(p1, p2, p3)
-            if result is None:
-                continue
-                
-            ox, oy, radius = result
+        largest_circles = []  # To store all largest circles
+
+        # Iterate over all Voronoi vertices (the ones where three or more edges meet)
+        for vertex in self.get_voronoi_vertices():
+            ox, oy = vertex[0], vertex[1]
+            radius = self.distance_to_closest_site(ox, oy)
             
-            # Skip jika radius lebih kecil dari maximum yang sudah ada
-            if radius <= max_radius:
-                continue
-            
-            # Cek apakah lingkaran kosong
+            # Check if the circle is empty (no points inside)
             is_empty = True
-            other_points = filterfalse(lambda p: p in (p1, p2, p3), points)
-            
-            for point in other_points:
-                if math.hypot(point.x - ox, point.y - oy) < radius:
+            for p in self.points_copy:
+                if self.distance(ox, oy, p.x, p.y) < radius:
                     is_empty = False
                     break
             
-            if is_empty:
-                if radius > max_radius:
-                    max_radius = radius
-                    largest_circles = [(ox, oy, radius)]
-                elif radius == max_radius:
-                    largest_circles.append((ox, oy, radius))
-        
+            if is_empty and radius > max_radius:
+                max_radius = radius
+                largest_circles = [(ox, oy, radius)]
+            elif is_empty and radius == max_radius:
+                largest_circles.append((ox, oy, radius))
+
         return largest_circles
 
-    def circumcenter(self, p1: Point, p2: Point, p3: Point) -> Optional[Tuple[float, float, float]]:
-        # Hitung determinan untuk cek collinear
-        D = 2 * ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
-        
-        if abs(D) < 1e-6:  # Threshold untuk collinear
-            return None
-            
-        # Pre-compute squared terms
-        p1_squared = p1.x**2 + p1.y**2
-        p2_squared = p2.x**2 + p2.y**2
-        p3_squared = p3.x**2 + p3.y**2
-        
-        # Hitung center
-        ox = (p1_squared * (p2.y - p3.y) + p2_squared * (p3.y - p1.y) + p3_squared * (p1.y - p2.y)) / D
-        oy = (p1_squared * (p3.x - p2.x) + p2_squared * (p1.x - p3.x) + p3_squared * (p2.x - p1.x)) / D
-        
-        # Hitung radius
-        radius = math.hypot(ox - p1.x, oy - p1.y)
-        
-        return ox, oy, radius
+    def distance_to_closest_site(self, ox, oy):
+        # Implement a method to find the closest site point to the given point (ox, oy)
+        return min([self.distance(ox, oy, p.x, p.y) for p in self.points_copy])
+
+    def distance(self, x1, y1, x2, y2):
+        # Euclidean distance between two points
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
