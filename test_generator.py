@@ -1,11 +1,13 @@
-# Change for points needed
 import random
-
+import uuid
 
 points = 50
+output_file = f"{uuid.uuid4()}.txt"
+coordinates = [(random.randint(0, 500), random.randint(0, 500)) for _ in range(points)]
 
-coordinates = [(random.randint(0, 500), random.randint(0, 500)) for i in range(points)]
+with open(output_file, 'w') as file:
+    file.write(f"{points}\n")  
+    for x, y in coordinates:
+        file.write(f"{x} {y}\n")
 
-# Format and print the coordinates
-formatted_coordinates = "\n".join(f"{x} {y}" for x, y in coordinates)
-print(formatted_coordinates)
+print(f"Koordinat random telah disimpan di '{output_file}'")
