@@ -1,53 +1,53 @@
 import random
 import math
-
+from itertools import combinations, filterfalse
+from typing import List, Tuple, Optional
 from datatypes import Point, Event, Arc, Segment, PriorityQueue
 
 class Voronoi:
     def __init__(self, points):
-        self.output = [] # list of line segment
-        self.arc = None  # binary tree for parabola arcs
-
-        self.points = PriorityQueue() # site events
-        self.event = PriorityQueue() # circle events
-        self.points_copy = []  # Store the original points
-
-        # bounding box
-        self.x0 = -50.0
-        self.x1 = -50.0
-        self.y0 = 550.0
-        self.y1 = 550.0
-
-        # insert points to site event
-        for pts in points:
-            point = Point(pts[0], pts[1])
+        self.output = []
+        self.arc = None
+        self.points = PriorityQueue()
+        self.event = PriorityQueue()
+        self.points_copy = []
+        
+        # Inisialisasi bounding box
+        self.x0 = self.x1 = -50.0
+        self.y0 = self.y1 = 550.0
+        
+        # Proses input points
+        for x, y in points:
+            point = Point(x, y)
             self.points.push(point)
             self.points_copy.append(point)
-            # keep track of bounding box size
-            if point.x < self.x0: self.x0 = point.x
-            if point.y < self.y0: self.y0 = point.y
-            if point.x > self.x1: self.x1 = point.x
-            if point.y > self.y1: self.y1 = point.y
-
-        # add margins to the bounding box
+            
+            # Update bounding box
+            self.x0 = min(self.x0, point.x)
+            self.y0 = min(self.y0, point.y)
+            self.x1 = max(self.x1, point.x)
+            self.y1 = max(self.y1, point.y)
+        
+        # Tambahkan margin ke bounding box
         dx = (self.x1 - self.x0 + 1) / 5.0
         dy = (self.y1 - self.y0 + 1) / 5.0
-        self.x0 = self.x0 - dx
-        self.x1 = self.x1 + dx
-        self.y0 = self.y0 - dy
-        self.y1 = self.y1 + dy
-
+        self.x0 -= dx
+        self.x1 += dx
+        self.y0 -= dy
+        self.y1 += dy
+        
     def process(self):
+        """Proses utama untuk membuat diagram Voronoi."""
         while not self.points.empty():
-            if not self.event.empty() and (self.event.top().x <= self.points.top().x):
-                self.process_event() # handle circle event
+            if not self.event.empty() and self.event.top().x <= self.points.top().x:
+                self.process_event()
             else:
-                self.process_point() # handle site event
-
-        # after all points, process remaining circle events
+                self.process_point()
+        
+        # Proses sisa circle events
         while not self.event.empty():
             self.process_event()
-
+            
         self.finish_edges()
 
     def process_point(self):
@@ -212,7 +212,7 @@ class Voronoi:
             z0 = 2.0 * (p0.x - l)
             z1 = 2.0 * (p1.x - l)
 
-            a = 1.0/z0 - 1.0/z1;
+            a = 1.0/z0 - 1.0/z1
             b = -2.0 * (p0.y/z0 - p1.y/z1)
             c = 1.0 * (p0.y**2 + p0.x**2 - l**2) / z0 - 1.0 * (p1.y**2 + p1.x**2 - l**2) / z1
 
@@ -231,70 +231,66 @@ class Voronoi:
                 i.s1.finish(p)
             i = i.pnext
 
-    def get_output(self):
-        res = []
-        for o in self.output:
-            p0 = o.start
-            p1 = o.end
-            if p0 is not None and p1 is not None:
-                res.append((p0.x, p0.y, p1.x, p1.y))
-            elif p0 is not None:
-                # If only start point exists, use it for both start and end
-                res.append((p0.x, p0.y, p0.x, p0.y))
-            # If neither point exists, we skip this edge
-        return res
+    def get_output(self) -> List[Tuple[float, float, float, float]]:
+        return [(o.start.x, o.start.y, o.end.x, o.end.y) if o.end else 
+                (o.start.x, o.start.y, o.start.x, o.start.y) 
+                for o in self.output if o.start]
 
-    def find_largest_empty_circle(self):
+    def find_largest_empty_circle(self) -> List[Tuple[float, float, float]]:
         max_radius = 0
-        largest_circles = []  # To store all largest circles
-
-        points_list = self.points_copy
-
-        for p1 in points_list:
-            for p2 in points_list:
-                if p1 == p2: continue
-                for p3 in points_list:
-                    if p3 == p1 or p3 == p2: continue
-                    
-                    result = self.circumcenter(p1, p2, p3)
-                    if result is None:
-                        continue  # Skip collinear points
-                    
-                    ox, oy, radius = result
-                    
-                    is_empty = True
-                    for p in points_list:
-                        if p != p1 and p != p2 and p != p3:
-                            distance = math.sqrt((p.x - ox) ** 2 + (p.y - oy) ** 2)
-                            if distance < radius:
-                                is_empty = False
-                                break
-                    
-                    if is_empty:
-                        if radius > max_radius:
-                            max_radius = radius
-                            largest_circles = [(ox, oy, radius)]
-                        elif radius == max_radius:
-                            largest_circles.append((ox, oy, radius))
-
+        largest_circles = []
+        points = self.points_copy
+        
+        # Generate semua kombinasi 3 titik yang mungkin
+        point_combinations = combinations(points, 3)
+        
+        for p1, p2, p3 in point_combinations:
+            # Hitung circumcenter
+            result = self.circumcenter(p1, p2, p3)
+            if result is None:
+                continue
+                
+            ox, oy, radius = result
+            
+            # Skip jika radius lebih kecil dari maximum yang sudah ada
+            if radius <= max_radius:
+                continue
+            
+            # Cek apakah lingkaran kosong
+            is_empty = True
+            other_points = filterfalse(lambda p: p in (p1, p2, p3), points)
+            
+            for point in other_points:
+                if math.hypot(point.x - ox, point.y - oy) < radius:
+                    is_empty = False
+                    break
+            
+            if is_empty:
+                if radius > max_radius:
+                    max_radius = radius
+                    largest_circles = [(ox, oy, radius)]
+                elif radius == max_radius:
+                    largest_circles.append((ox, oy, radius))
+        
         return largest_circles
 
-    def circumcenter(self, p1, p2, p3):
-        x1, y1 = p1.x, p1.y
-        x2, y2 = p2.x, p2.y
-        x3, y3 = p3.x, p3.y
-
-        # Compute the determinant D
-        D = 2 * ((x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3))
-
-        if abs(D) < 1e-6:  # Check if D is very close to zero
-            return None  # Return None for collinear points
-
-        # Compute the circumcenter (ox, oy)
-        ox = ((x1**2 + y1**2) * (y2 - y3) + (x2**2 + y2**2) * (y3 - y1) + (x3**2 + y3**2) * (y1 - y2)) / D
-        oy = ((x1**2 + y1**2) * (x3 - x2) + (x2**2 + y2**2) * (x1 - x3) + (x3**2 + y3**2) * (x2 - x1)) / D
-
-        # Compute the radius (distance from circumcenter to any point)
-        radius = math.sqrt((ox - x1)**2 + (oy - y1)**2)
-
+    def circumcenter(self, p1: Point, p2: Point, p3: Point) -> Optional[Tuple[float, float, float]]:
+        # Hitung determinan untuk cek collinear
+        D = 2 * ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
+        
+        if abs(D) < 1e-6:  # Threshold untuk collinear
+            return None
+            
+        # Pre-compute squared terms
+        p1_squared = p1.x**2 + p1.y**2
+        p2_squared = p2.x**2 + p2.y**2
+        p3_squared = p3.x**2 + p3.y**2
+        
+        # Hitung center
+        ox = (p1_squared * (p2.y - p3.y) + p2_squared * (p3.y - p1.y) + p3_squared * (p1.y - p2.y)) / D
+        oy = (p1_squared * (p3.x - p2.x) + p2_squared * (p1.x - p3.x) + p3_squared * (p2.x - p1.x)) / D
+        
+        # Hitung radius
+        radius = math.hypot(ox - p1.x, oy - p1.y)
+        
         return ox, oy, radius
