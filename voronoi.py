@@ -29,9 +29,6 @@ class Voronoi:
         self.x1 += dx
         self.y0 -= dy
         self.y1 += dy
-    
-    def get_voronoi_vertices(self):
-        return [(v.x, v.y) for v in self.voronoi_vertices]
         
     def process(self):
         """Processing all the points to create the voronoi diagram."""
@@ -53,31 +50,38 @@ class Voronoi:
     def handle_circle_event(self):
         circle_event = self.circle_events.pop()
 
-        if circle_event.valid:
-            segment = Segment(circle_event.point)
-            self.segments.append(segment)
-            self.voronoi_vertices.append(circle_event.point)
+        if not circle_event.valid:
+            return
 
-            arc = circle_event.arc
-            if arc.pprev is not None:
-                arc.pprev.pnext = arc.pnext
-                arc.pprev.s1 = segment
-            if arc.pnext is not None:
-                arc.pnext.pprev = arc.pprev
-                arc.pnext.s0 = segment
+        # Create a new segment at the circle event point
+        segment = Segment(circle_event.point)
+        self.segments.append(segment)
+        self.voronoi_vertices.append(circle_event.point)
 
-            # Finish the edges before and after this arc
-            if arc.s0 is not None:
-                arc.s0.finish(circle_event.point)
-            if arc.s1 is not None:
-                arc.s1.finish(circle_event.point)
+        # Get the arc associated with this circle event
+        arc = circle_event.arc
+        self.update_neighbors(arc, segment)
 
-            # Recheck circle events on either side of the associated point
-            if arc.pprev is not None:
-                self.check_circle_event(arc.pprev, circle_event.x)
-            if arc.pnext is not None:
-                self.check_circle_event(arc.pnext, circle_event.x)
+        # Finish the edges before and after this arc
+        if arc.s0 is not None:
+            arc.s0.finish(circle_event.point)
+        if arc.s1 is not None:
+            arc.s1.finish(circle_event.point)
 
+        # Recheck circle events on either side of the arc
+        if arc.pprev:
+            self.check_circle_event(arc.pprev, circle_event.x)
+        if arc.pnext:
+            self.check_circle_event(arc.pnext, circle_event.x)
+    
+    def update_neighbors(self, arc, segment):
+        """Update the pointers and segment associations for the neighboring arcs."""
+        if arc.pprev:
+            arc.pprev.pnext = arc.pnext
+            arc.pprev.s1 = segment
+        if arc.pnext:
+            arc.pnext.pprev = arc.pprev
+            arc.pnext.s0 = segment
 
     def insert_arc(self, p):
         if self.arc is None:
@@ -133,7 +137,6 @@ class Voronoi:
         i.s1 = i.pnext.s0 = seg
         self.segments.append(seg)
 
-
     def check_circle_event(self, i, x0):
         """
         Checks if there is a circle event.
@@ -170,12 +173,10 @@ class Voronoi:
             - True, the center of the circle, and the rightmost point of the circle if such circle exists.
             - False, None, and None otherwise.
         """
-
         cross_product = (b.x - a.x)*(c.y - a.y) - (c.x - a.x)*(b.y - a.y)
         # Check the cross product of ab and ac. If it's positive (left turn), there's no circle
         if (cross_product) > 0: return False, None, None
 
-        # Joseph O'Rourke, Computational Geometry in C (2nd ed.) p.189
         # x and y components for the vector ab
         A = b.x - a.x
         B = b.y - a.y
@@ -291,13 +292,14 @@ class Voronoi:
         return res
 
     def finish_edges(self):
-        l = self.x1 + (self.x1 - self.x0) + (self.y1 - self.y0)
-        i = self.arc
-        while i.pnext != None:
-            if i.s1 != None:
-                p = self.intersection(i.focus, i.pnext.focus, l*2.0)
-                i.s1.finish(p)
-            i = i.pnext
+        large_boundary = self.x1 + (self.x1 - self.x0) + (self.y1 - self.y0)
+
+        current_arc = self.arc
+        while current_arc is not None and current_arc.pnext is not None:
+            if current_arc.s1 is not None:
+                intersection_point = self.intersection(current_arc.focus, current_arc.pnext.focus, large_boundary * 2.0)
+                current_arc.s1.finish(intersection_point)
+            current_arc = current_arc.pnext
 
     def get_segments(self) -> List[Tuple[float, float, float, float]]:
         return [(o.start.x, o.start.y, o.end.x, o.end.y) if o.end else 
@@ -308,14 +310,14 @@ class Voronoi:
         max_radius = 0
         largest_circles = []
 
-        for vertex in self.get_voronoi_vertices():
-            ox, oy = vertex[0], vertex[1]
-            radius = self.distance_to_closest_site(ox, oy)
+        for vertex in self.voronoi_vertices:
+            ox, oy = vertex.x, vertex.y
+            radius = self.distance_to_closest_site(vertex)
             
             is_empty = True
             # Checks if there are any points from the voronoi vertex that lies within the radius of the circle
             for p in self.original_points:
-                if self.distance(ox, oy, p.x, p.y) < radius:
+                if vertex.distance(p) < radius:
                     is_empty = False
                     break
             if is_empty and radius > max_radius:
@@ -326,8 +328,5 @@ class Voronoi:
 
         return largest_circles
 
-    def distance_to_closest_site(self, ox, oy):
-        return min([self.distance(ox, oy, p.x, p.y) for p in self.original_points])
-
-    def distance(self, x1, y1, x2, y2):
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    def distance_to_closest_site(self, o):
+        return min([o.distance(p) for p in self.original_points])
