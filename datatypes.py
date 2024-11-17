@@ -8,26 +8,26 @@ class Point:
         self.x = x
         self.y = y
 
-class Event:
-    __slots__ = ['x', 'p', 'a', 'valid']
+class CircleEvent:
+    __slots__ = ['x', 'point', 'arc', 'valid']
     
-    def __init__(self, x=0.0, p=None, a=None):
+    def __init__(self, x=0.0, point=None, arc=None):
         self.x = x
-        self.p = p
-        self.a = a
+        self.point = point
+        self.arc = arc
         self.valid = True
     
     def __lt__(self, other):
         return self.x < other.x
 
 class Arc:
-    __slots__ = ['p', 'pprev', 'pnext', 'e', 's0', 's1']
+    __slots__ = ['focus', 'pprev', 'pnext', 'circle_event', 's0', 's1']
     
-    def __init__(self, p=None, a=None, b=None):
-        self.p = p
+    def __init__(self, focus=None, a=None, b=None):
+        self.focus = focus
         self.pprev = a
         self.pnext = b
-        self.e = None
+        self.circle_event = None
         self.s0 = None
         self.s1 = None
 
