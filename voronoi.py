@@ -246,7 +246,7 @@ class Voronoi:
 
     def find_largest_empty_circle(self):
         max_radius = 0
-        largest_circle = None
+        largest_circles = []  # To store all largest circles
 
         points_list = self.points_copy
 
@@ -270,10 +270,14 @@ class Voronoi:
                                 is_empty = False
                                 break
                     
-                    if is_empty and radius > max_radius:
-                        max_radius = radius
-                        largest_circle = (ox, oy, radius)
-        return largest_circle
+                    if is_empty:
+                        if radius > max_radius:
+                            max_radius = radius
+                            largest_circles = [(ox, oy, radius)]
+                        elif radius == max_radius:
+                            largest_circles.append((ox, oy, radius))
+
+        return largest_circles
 
     def circumcenter(self, p1, p2, p3):
         x1, y1 = p1.x, p1.y

@@ -116,8 +116,9 @@ class MainWindow:
 
     def drawCircleOnCanvas(self, largest_circle):
         if largest_circle:
-            ox, oy, radius = largest_circle
-            self.w.create_oval(ox - radius, oy - radius, ox + radius, oy + radius, outline="red", width=2, tags="circle")
+            for circle in largest_circle:
+                ox, oy, radius = circle
+                self.w.create_oval(ox - radius, oy - radius, ox + radius, oy + radius, outline="red", width=2, tags="circle")
 
 def main(): 
     root = tk.Tk()
