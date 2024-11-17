@@ -1,5 +1,4 @@
 import heapq
-from collections import namedtuple
 
 class Point:
     __slots__ = ['x', 'y']

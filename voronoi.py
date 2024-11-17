@@ -29,25 +29,28 @@ class Voronoi:
         self.x1 += dx
         self.y0 -= dy
         self.y1 += dy
+    
+    def get_voronoi_vertices(self):
+        return [(v.x, v.y) for v in self.voronoi_vertices]
         
     def process(self):
         """Processing all the points to create the voronoi diagram."""
         while not self.site_events.empty():
-            if not self.circle_events.empty() and self.circle_events.top().x <= self.site_events.top().x:
-                self.process_circle_event()
+            if self.circle_events.empty() or self.circle_events.top().x > self.site_events.top().x:
+                self.handle_site_event()
             else:
-                self.process_site_event()
+                self.handle_circle_event()
         
         while not self.circle_events.empty():
-            self.process_circle_event()
+            self.handle_circle_event()
             
         self.finish_edges()
 
-    def process_site_event(self):
+    def handle_site_event(self):
         point = self.site_events.pop()
-        self.arc_insert(point)
+        self.insert_arc(point)
 
-    def process_circle_event(self):
+    def handle_circle_event(self):
         circle_event = self.circle_events.pop()
 
         if circle_event.valid:
@@ -75,136 +78,205 @@ class Voronoi:
             if arc.pnext is not None:
                 self.check_circle_event(arc.pnext, circle_event.x)
 
-    def get_voronoi_vertices(self):
-        return [(v.x, v.y) for v in self.voronoi_vertices]
 
-    def arc_insert(self, p):
+    def insert_arc(self, p):
         if self.arc is None:
             self.arc = Arc(p)
-        else:
-            # Find the current arcs at p.y
-            i = self.arc
-            while i != None:
-                flag, z = self.intersect(p, i)
-                if flag:
-                    # new parabola intersects arc i
-                    flag, zz = self.intersect(p, i.pnext)
-                    if (i.pnext != None) and (not flag):
-                        i.pnext.pprev = Arc(i.focus, i, i.pnext)
-                        i.pnext = i.pnext.pprev
-                    else:
-                        i.pnext = Arc(i.focus, i)
-                    i.pnext.s1 = i.s1
+            return
 
-                    # add p between i and i.pnext
-                    i.pnext.pprev = Arc(p, i, i.pnext)
+        i = self.arc
+        while i:
+            # Check for intersection with the current arc
+            flag, z = self.intersect(p, i)
+            if flag:
+                # Handle intersection with i and i.pnext
+                if i.pnext and not self.intersect(p, i.pnext)[0]:
+                    i.pnext.pprev = Arc(i.focus, i, i.pnext)
                     i.pnext = i.pnext.pprev
+                else:
+                    i.pnext = Arc(i.focus, i)
 
-                    i = i.pnext # now i points to the new arc
-
-                    # add new half-edges connected to i's endpoints
-                    seg = Segment(z)
-                    self.segments.append(seg)
-                    i.pprev.s1 = i.s0 = seg
-
-                    seg = Segment(z)
-                    self.segments.append(seg)
-                    i.pnext.s0 = i.s1 = seg
-
-                    # check for new circle events around the new arc
-                    self.check_circle_event(i, p.x)
-                    self.check_circle_event(i.pprev, p.x)
-                    self.check_circle_event(i.pnext, p.x)
-
-                    return
-                        
+                # Insert new arc and update segments
+                i.pnext.s1 = i.s1
+                i.pnext.pprev = Arc(p, i, i.pnext)
+                i.pnext = i.pnext.pprev
                 i = i.pnext
 
-            # if p never intersects an arc, append it to the list
-            i = self.arc
-            while i.pnext != None:
-                i = i.pnext
-            i.pnext = Arc(p, i)
-            
-            # insert new segment between p and i
-            x = self.x0
-            y = (i.pnext.focus.y + i.focus.y) / 2.0
-            start = Point(x, y)
+                seg = Segment(z)
+                self.segments.append(seg)
+                i.pprev.s1 = i.s0 = seg
 
-            seg = Segment(start)
-            i.s1 = i.pnext.s0 = seg
-            self.segments.append(seg)
+                seg = Segment(z)
+                self.segments.append(seg)
+                i.pnext.s0 = i.s1 = seg
+
+                # Check for new circle events after new arc has been added
+                self.check_circle_event(i, p.x)
+                self.check_circle_event(i.pprev, p.x)
+                self.check_circle_event(i.pnext, p.x)
+
+                return
+            i = i.pnext
+
+        # If there's no intersection, append the new arc
+        i = self.arc
+        while i.pnext:
+            i = i.pnext
+        i.pnext = Arc(p, i)
+
+        # Insert new segment between p and i
+        x = self.x0
+        y = (i.pnext.focus.y + i.focus.y) / 2.0
+        start = Point(x, y)
+
+        seg = Segment(start)
+        i.s1 = i.pnext.s0 = seg
+        self.segments.append(seg)
+
 
     def check_circle_event(self, i, x0):
-        # look for a new circle event for arc i
+        """
+        Checks if there is a circle event.
+
+        Parameters
+        ----------
+        i : Arc
+            The arc that is being checked for a circle event
+        x0 : Float
+            The x-coordinate of the current sweep line position
+        """
         if (i.circle_event != None) and (i.circle_event.x != self.x0):
             i.circle_event.valid = False
         i.circle_event = None
 
         if (i.pprev is None) or (i.pnext is None): return
 
-        flag, x, o = self.circle(i.pprev.focus, i.focus, i.pnext.focus)
+        flag, o, x = self.circle(i.pprev.focus, i.focus, i.pnext.focus)
         if flag and (x > self.x0):
             i.circle_event = CircleEvent(x, o, i)
             self.circle_events.push(i.circle_event)
 
     def circle(self, a, b, c):
-        # Check if bc is a "right turn" from ab
-        if ((b.x - a.x)*(c.y - a.y) - (c.x - a.x)*(b.y - a.y)) > 0: return False, None, None
+        """
+        Checks if there is a circle that passes through the points a, b, and c which are the foci of three parabolas.
+
+        Parameters
+        ----------
+        a, b, c : Point
+                  The focus of each parabola.
+        Returns
+        -------
+        (bool, Point, Point)
+            - True, the center of the circle, and the rightmost point of the circle if such circle exists.
+            - False, None, and None otherwise.
+        """
+
+        cross_product = (b.x - a.x)*(c.y - a.y) - (c.x - a.x)*(b.y - a.y)
+        # Check the cross product of ab and ac. If it's positive (left turn), there's no circle
+        if (cross_product) > 0: return False, None, None
 
         # Joseph O'Rourke, Computational Geometry in C (2nd ed.) p.189
+        # x and y components for the vector ab
         A = b.x - a.x
         B = b.y - a.y
+
+        # x and y components for the vector ac
         C = c.x - a.x
         D = c.y - a.y
+
         E = A*(a.x + b.x) + B*(a.y + b.y)
         F = C*(a.x + c.x) + D*(a.y + c.y)
-        G = 2*(A*(c.y - b.y) - B*(c.x - b.x))
+        G = 2*cross_product
 
-        if (G == 0): return False, None, None # Points are co-linear
+        # Points are colinear, so there's no circle
+        if (G == 0):
+            return False, None, None
 
-        # point o is the center of the circle
+        # Point o is the circumcenter of the points a, b, c
         ox = 1.0 * (D*E - B*F) / G
         oy = 1.0 * (A*F - C*E) / G
-
-        # o.x plus radius equals max x coord
-        x = ox + math.sqrt((a.x-ox)**2 + (a.y-oy)**2)
         o = Point(ox, oy)
+
+        # Calculating the rightmost point of the circumcircle
+        x = ox + math.sqrt((a.x-ox)**2 + (a.y-oy)**2)
            
-        return True, x, o
+        return True, o, x
         
     def intersect(self, p, i):
-        # check whether a new parabola at point p intersect with arc i
+        """
+        Check if a new site p intersects the arc represented by i.
+
+        Parameters
+        ----------
+        p : Point
+            The new site being inserted.
+        i : Arc
+            The arc on the beachline to check for intersection.
+
+        Returns
+        -------
+        (bool, Point)
+            - True and the intersection point if an intersection exists.
+            - False and None otherwise.
+        """
+
         if (i is None): return False, None
         if (i.focus.x == p.x): return False, None
 
-        a = 0.0
-        b = 0.0
+        lower_boundary = None
+        upper_boundary = None
 
-        if i.pprev != None:
-            a = (self.intersection(i.pprev.focus, i.focus, 1.0*p.x)).y
-        if i.pnext != None:
-            b = (self.intersection(i.focus, i.pnext.focus, 1.0*p.x)).y
+        # Compute the lower boundary using the previous arc, if it exists
+        if i.pprev is not None:
+            lower_boundary = self.intersection(i.pprev.focus, i.focus, p.x).y
 
-        if (((i.pprev is None) or (a <= p.y)) and ((i.pnext is None) or (p.y <= b))):
+        # Compute the upper boundary using the next arc, if it exists
+        if i.pnext is not None:
+            upper_boundary = self.intersection(i.focus, i.pnext.focus, p.x).y
+
+        # Check if the point p lies within the vertical range of the arc
+        if ((i.pprev is None or lower_boundary <= p.y) and
+            (i.pnext is None or p.y <= upper_boundary)):
+            
+            # Calculate the intersection point
             py = p.y
-            px = 1.0 * ((i.focus.x)**2 + (i.focus.y-py)**2 - p.x**2) / (2*i.focus.x - 2*p.x)
-            res = Point(px, py)
-            return True, res
+            px = ((i.focus.x ** 2) + (i.focus.y - py) ** 2 - p.x ** 2) / (2 * i.focus.x - 2 * p.x)
+            intersection_point = Point(px, py)
+            
+            return True, intersection_point
+
+        # If no intersection, return False
         return False, None
 
     def intersection(self, p0, p1, l):
-        # get the intersection of two parabolas
+        """
+        Gets the intersection between two parabola below the sweep line
+
+        Parameter
+        ----------
+        p0 : Point
+            Focus of the first parabola
+        p1 : Point
+            Focus of the second parabola
+        l : Point
+            Position of the vertical sweeplinee
+            
+        Returns
+        -------
+        res: the point of intersection between the two parabola
+        """
+
         p = p0
-        if (p0.x == p1.x):
+        
+        if (p0.x == p1.x): # If the foci are the same
             py = (p0.y + p1.y) / 2.0
+        # If one of the foci lie on the sweep line
         elif (p1.x == l):
-            py = p1.y
+            py = p1.y 
         elif (p0.x == l):
             py = p0.y
             p = p1
-        else:
-            # use quadratic formula
+        else: # Otherwise, the intersection can be found with the quadratic formula
             z0 = 2.0 * (p0.x - l)
             z1 = 2.0 * (p1.x - l)
 
@@ -227,12 +299,19 @@ class Voronoi:
                 i.s1.finish(p)
             i = i.pnext
 
-    def get_output(self) -> List[Tuple[float, float, float, float]]:
+    def get_segments(self) -> List[Tuple[float, float, float, float]]:
         return [(o.start.x, o.start.y, o.end.x, o.end.y) if o.end else 
                 (o.start.x, o.start.y, o.start.x, o.start.y) 
                 for o in self.segments if o.start]
 
     def find_largest_empty_circle(self) -> List[Tuple[float, float, float]]:
+        """
+        Finds the largest empty circle from the voronoi vertices
+        Returns
+        -------
+        largest_circles: List[Tuple[float, float, float]]
+                        A list of the largest empty circles that goes through 3 points in the Voronoi Diagram
+        """
         max_radius = 0
         largest_circles = []
 

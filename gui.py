@@ -51,7 +51,7 @@ class MainWindow:
             try:
                 vp = Voronoi(points)
                 vp.process()
-                lines = vp.get_output()
+                lines = vp.get_segments()
                 if lines:
                     self.drawLinesOnCanvas(lines)
 
