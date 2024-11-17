@@ -305,13 +305,6 @@ class Voronoi:
                 for o in self.segments if o.start]
 
     def find_largest_empty_circle(self) -> List[Tuple[float, float, float]]:
-        """
-        Finds the largest empty circle from the voronoi vertices
-        Returns
-        -------
-        largest_circles: List[Tuple[float, float, float]]
-                        A list of the largest empty circles that goes through 3 points in the Voronoi Diagram
-        """
         max_radius = 0
         largest_circles = []
 
@@ -320,11 +313,11 @@ class Voronoi:
             radius = self.distance_to_closest_site(ox, oy)
             
             is_empty = True
+            # Checks if there are any points from the voronoi vertex that lies within the radius of the circle
             for p in self.original_points:
                 if self.distance(ox, oy, p.x, p.y) < radius:
                     is_empty = False
                     break
-            
             if is_empty and radius > max_radius:
                 max_radius = radius
                 largest_circles = [(ox, oy, radius)]
