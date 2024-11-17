@@ -6,7 +6,6 @@ from datatypes import Point, Event, Arc, Segment, PriorityQueue
 
 class Voronoi:
     def __init__(self, points):
-<<<<<<< HEAD
         self.output = []  # list of line segments
         self.arc = None  # binary tree for parabola arcs
 
@@ -24,21 +23,6 @@ class Voronoi:
         # insert points to site event
         for pts in points:
             point = Point(pts[0], pts[1])
-=======
-        self.output = []
-        self.arc = None
-        self.points = PriorityQueue()
-        self.event = PriorityQueue()
-        self.points_copy = []
-        
-        # Inisialisasi bounding box
-        self.x0 = self.x1 = -50.0
-        self.y0 = self.y1 = 550.0
-        
-        # Proses input points
-        for x, y in points:
-            point = Point(x, y)
->>>>>>> 98b9ffd45aca3263d1ab60f71d9a073aaab3f465
             self.points.push(point)
             self.points_copy.append(point)
             
@@ -59,21 +43,12 @@ class Voronoi:
     def process(self):
         """Proses utama untuk membuat diagram Voronoi."""
         while not self.points.empty():
-<<<<<<< HEAD
-            if not self.event.empty() and (self.event.top().x <= self.points.top().x):
-                self.process_event()  # handle circle event
-            else:
-                self.process_point()  # handle site event
-
-        # after all points, process remaining circle events
-=======
             if not self.event.empty() and self.event.top().x <= self.points.top().x:
                 self.process_event()
             else:
                 self.process_point()
         
         # Proses sisa circle events
->>>>>>> 98b9ffd45aca3263d1ab60f71d9a073aaab3f465
         while not self.event.empty():
             self.process_event()
             
