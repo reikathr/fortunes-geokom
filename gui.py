@@ -51,8 +51,8 @@ class MainWindow:
             self.LOCK_FLAG = True
             self.w.delete("segments", "circle")
 
-            self.points_set = set(self.points)
-            points = [(x, y + 1e-11 * randint(1,i+1)) for i, (x, y) in enumerate(self.points_set)]
+            points = [(x, y + 1e-9 * randint(1,2)) for i, (x, y) in enumerate(self.points)]
+            print(points)
             try:
                 vp = Voronoi(points)
                 vp.process()
@@ -97,8 +97,9 @@ class MainWindow:
                         temp_points.append((x, y))
                     except ValueError as e:
                         error_messages.append(str(e))
-            
-            self.points = sorted(temp_points, key=lambda point: (point[0], point[1]))
+            self.points_set = set(temp_points)
+            self.points = list(self.points_set)
+            self.points = sorted(self.points, key=lambda point: (point[0], point[1]))
             
             for x, y in self.points:
                 self.w.create_oval(x-self.RADIUS, y-self.RADIUS, x+self.RADIUS, y+self.RADIUS, fill="black")
