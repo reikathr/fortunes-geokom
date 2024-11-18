@@ -77,13 +77,11 @@ class SiteEventHandler:
 
         if arc.pprev is not None:
             lower_boundary = arc.pprev.intersection(arc, sweep_line_x).y
-
         if arc.pnext is not None:
             upper_boundary = arc.intersection(arc.pnext, sweep_line_x).y
 
         if ((arc.pprev is None or lower_boundary <= p.y) and
             (arc.pnext is None or p.y <= upper_boundary)):
-            
             py = p.y
             px = ((arc.focus.x ** 2) + (arc.focus.y - py) ** 2 - p.x ** 2) / (2 * arc.focus.x - 2 * p.x)
             intersection_point = Point(px, py)
@@ -142,24 +140,28 @@ class CircleEventHandler:
 
     def _circle(self, a: Point, b: Point, c: Point) -> Tuple[bool, Optional[Point], Optional[float]]:
         """Check if there is a circle passing through three points."""
-        # Check if points form a counter-clockwise turn
         cross_product = (b.x - a.x)*(c.y - a.y) - (c.x - a.x)*(b.y - a.y)
-        if cross_product > 0:
+        # Check the cross product of ab and ac. If it's positive (left turn), there's no circle
+        if (cross_product) > 0:
             return False, None, None
 
-        # Calculate circle center using perpendicular bisectors
+        # x and y components for the vector ab
         A = b.x - a.x
         B = b.y - a.y
+
+        # x and y components for the vector ac
         C = c.x - a.x
         D = c.y - a.y
+
         E = A*(a.x + b.x) + B*(a.y + b.y)
         F = C*(a.x + c.x) + D*(a.y + c.y)
-        G = 2*(A*D - B*C)
+        G = 2*cross_product
 
-        if G == 0:  # Points are collinear
+        # Points are colinear, so there's no circle
+        if (G == 0):
             return False, None, None
 
-        # Circle center
+        # Point o is the circumcenter of the points a, b, c
         ox = (D*E - B*F) / G
         oy = (A*F - C*E) / G
         o = Point(ox, oy)
