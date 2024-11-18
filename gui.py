@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from voronoi.voronoi import Voronoi
 
 class MainWindow:
-    RADIUS, LOCK_FLAG, CANVAS_SIZE, BUTTON_WIDTH = 3, False, 500, 25
+    RADIUS, LOCK_FLAG, CANVAS_WIDTH, CANVAS_HEIGHT, BUTTON_WIDTH = 3, False, 600, 500, 25
     
     def __init__(self, master):
         self.master = master
@@ -12,15 +12,15 @@ class MainWindow:
         
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
-        x = (screen_width - self.CANVAS_SIZE) // 2
-        y = (screen_height - self.CANVAS_SIZE - 40) // 2
+        x = (screen_width - self.CANVAS_WIDTH) // 2
+        y = (screen_height - self.CANVAS_HEIGHT - 40) // 2
         
-        self.master.geometry(f'{self.CANVAS_SIZE}x{self.CANVAS_SIZE+40}+{x}+{y}')
+        self.master.geometry(f'{self.CANVAS_WIDTH}x{self.CANVAS_HEIGHT+40}+{x}+{y}')
 
         self.frmMain = tk.Frame(self.master, relief=tk.RAISED, borderwidth=1)
         self.frmMain.pack(fill=tk.BOTH, expand=1)
 
-        self.w = tk.Canvas(self.frmMain, width=self.CANVAS_SIZE, height=self.CANVAS_SIZE, bg='white')
+        self.w = tk.Canvas(self.frmMain, width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT, bg='white')
         self.w.bind('<Button-1>', self.onClick)
         self.w.pack()
 
@@ -33,9 +33,12 @@ class MainWindow:
             ('Load Points', self.onClickLoad)
         ]
         
-        for text, command in buttons:
-            tk.Button(self.frmButton, text=text, width=self.BUTTON_WIDTH, command=command).pack(side=tk.LEFT)
-        
+        for i, (text, command) in enumerate(buttons):
+            button = tk.Button(self.frmButton, text=text, width=self.BUTTON_WIDTH, command=command)
+            button.grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
+
+        self.frmButton.grid_columnconfigure(tuple(range(len(buttons))), weight=1)
+
         self.points = []
 
     def onClickCalculate(self):
@@ -45,15 +48,15 @@ class MainWindow:
 
         if not self.LOCK_FLAG:
             self.LOCK_FLAG = True
-            self.w.delete("lines", "circle")
+            self.w.delete("segments", "circle")
 
             points = [(x, y + 1e-11 * i) for i, (x, y) in enumerate(self.points)]
             try:
                 vp = Voronoi(points)
                 vp.process()
-                lines = vp.get_segments()
-                if lines:
-                    self.drawLinesOnCanvas(lines)
+                segments = vp.get_segments()
+                if segments:
+                    self.drawLinesOnCanvas(segments)
 
                 largest_circle = vp.find_largest_empty_circle()
                 if largest_circle:
@@ -87,8 +90,8 @@ class MainWindow:
                         if len(parts) != 2:
                             raise ValueError(f"Line {line_num}: Expected 2 values, got {len(parts)}")
                         x, y = map(float, parts)
-                        if not (0 <= x <= self.CANVAS_SIZE and 0 <= y <= self.CANVAS_SIZE):
-                            raise ValueError(f"Line {line_num}: Coordinates out of bounds (0-{self.CANVAS_SIZE})")
+                        if not (0 <= x <= self.CANVAS_WIDTH and 0 <= y <= self.CANVAS_HEIGHT):
+                            raise ValueError(f"Line {line_num}: Coordinates out of bounds (0-{self.CANVAS_WIDTH})")
                         temp_points.append((x, y))
                     except ValueError as e:
                         error_messages.append(str(e))
@@ -101,9 +104,9 @@ class MainWindow:
             if error_messages:
                 messagebox.showerror("Input Error", "The following errors occurred:\n\n" + "\n".join(error_messages))
 
-    def drawLinesOnCanvas(self, lines):
-        for l in lines:
-            self.w.create_line(*l, fill='blue', tags="lines")
+    def drawLinesOnCanvas(self, segments):
+        for s in segments:
+            self.w.create_line(*s, fill='purple', tags="segments")
 
     def drawCircleOnCanvas(self, largest_circle):
         for ox, oy, radius in largest_circle:
