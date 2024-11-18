@@ -12,9 +12,8 @@ class Voronoi:
         self.original_points = [] 
         self.voronoi_vertices = []
 
-        self.x0, self.x1 = 0.0, 650.0  # Width of the canvas (from 0 to 600)
-        self.y0, self.y1 = 0.0, 550.0  # Height of the canvas (from 0 to 500)
-
+        self.x0, self.x1 = 0.0, 650.0
+        self.y0, self.y1 = 0.0, 550.0
 
         # Insert points into site event PQ
         for x,y in points:
