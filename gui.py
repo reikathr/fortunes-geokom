@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from voronoi.voronoi import Voronoi
 from random import randint
+from collections import Counter
 
 class MainWindow:
     RADIUS, LOCK_FLAG, CANVAS_WIDTH, CANVAS_HEIGHT, BUTTON_WIDTH = 3, False, 650, 500, 25
@@ -51,7 +52,20 @@ class MainWindow:
             self.LOCK_FLAG = True
             self.w.delete("segments", "circle")
 
-            points = [(x, y + 1e-9 * randint(1,2)) for i, (x, y) in enumerate(self.points)]
+            collinear_count = Counter()
+
+            # Combine x and y checks in one loop
+            for x, y in self.points:
+                collinear_count[f"x_{x}"] += 1
+                collinear_count[f"y_{y}"] += 1
+
+            # Check collinearity using `any` for early exit
+            too_collinear = any(amount > 3 for amount in collinear_count.values())
+
+            points = self.points
+            if not too_collinear:
+                points = [(x, y + 1e-9 * randint(1,2)) for i, (x, y) in enumerate(self.points)]
+
             print(points)
             try:
                 vp = Voronoi(points)
