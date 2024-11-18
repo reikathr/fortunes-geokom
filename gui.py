@@ -65,8 +65,6 @@ class MainWindow:
                 points = [(x, y + 1e-9 * randint(1,i+1)) for i, (x, y) in enumerate(self.points)]
             else:
                 points = [(x, y) for (x, y) in self.points]
-
-            print(points)
             try:
                 vp = Voronoi(points)
                 vp.process()
