@@ -16,6 +16,7 @@ class Voronoi:
         self.y0, self.y1 = 0.0, 550.0
 
         # Insert points into site event PQ
+        points = set(points)
         for x,y in points:
             point = Point(x, y)
             self.site_events.push(point)
