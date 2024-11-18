@@ -35,7 +35,7 @@ class Arc:
         self.s1 = None
 
     def intersection(self, other, l: float) -> Point:
-        """Get the intersection between two parabolas at sweep line l."""
+        """Get the intersection between this parabola and the given parabola at sweep line l."""
         p0 = self.focus
         p1 = other.focus
 
