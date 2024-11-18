@@ -58,8 +58,8 @@ class MainWindow:
                 largest_circle = vp.find_largest_empty_circle()
                 if largest_circle:
                     self.drawCircleOnCanvas(largest_circle)
-            #except Exception as e:
-                #messagebox.showerror("Calculation Error", f"An error occurred during calculation:\n\n{e}")
+            except Exception as e:
+                messagebox.showerror("Calculation Error", f"An error occurred during calculation:\n\n{e}")
             finally:
                 self.LOCK_FLAG = False
 
