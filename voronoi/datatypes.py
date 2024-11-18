@@ -34,6 +34,34 @@ class Arc:
         self.s0 = None
         self.s1 = None
 
+    def intersection(self, other, l: float) -> Point:
+        """Get the intersection between two parabolas at sweep line l."""
+        p0 = self.focus
+        p1 = other.focus
+
+        p = p0
+        
+        if p0.x == p1.x:  # If the foci are the same
+            py = (p0.y + p1.y) / 2.0
+        # If one of the foci lie on the sweep line
+        elif p1.x == l:
+            py = p1.y 
+        elif p0.x == l:
+            py = p0.y
+            p = p1
+        else:  # Otherwise, use quadratic formula
+            z0 = 2.0 * (p0.x - l)
+            z1 = 2.0 * (p1.x - l)
+
+            a = 1.0/z0 - 1.0/z1
+            b = -2.0 * (p0.y/z0 - p1.y/z1)
+            c = 1.0 * (p0.y**2 + p0.x**2 - l**2) / z0 - 1.0 * (p1.y**2 + p1.x**2 - l**2) / z1
+
+            py = 1.0 * (-b-math.sqrt(b*b - 4*a*c)) / (2*a)
+            
+        px = 1.0 * (p.x**2 + (p.y-py)**2 - l**2) / (2*p.x-2*l)
+        return Point(px, py)
+
 class Segment:
     __slots__ = ['start', 'end', 'done']
     

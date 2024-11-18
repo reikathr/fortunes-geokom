@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from voronoi import Voronoi
+from voronoi.voronoi import Voronoi
 
 class MainWindow:
     RADIUS, LOCK_FLAG, CANVAS_SIZE, BUTTON_WIDTH = 3, False, 500, 25
@@ -58,8 +58,8 @@ class MainWindow:
                 largest_circle = vp.find_largest_empty_circle()
                 if largest_circle:
                     self.drawCircleOnCanvas(largest_circle)
-            except Exception as e:
-                messagebox.showerror("Calculation Error", f"An error occurred during calculation:\n\n{e}")
+            #except Exception as e:
+                #messagebox.showerror("Calculation Error", f"An error occurred during calculation:\n\n{e}")
             finally:
                 self.LOCK_FLAG = False
 
