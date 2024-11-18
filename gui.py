@@ -50,7 +50,7 @@ class MainWindow:
             self.LOCK_FLAG = True
             self.w.delete("segments", "circle")
 
-            points = [(x, y + 1e-11 * i) for i, (x, y) in enumerate(self.points)]
+            points = [(x, y + 1e-11) for i, (x, y) in enumerate(self.points)]
             try:
                 vp = Voronoi(points)
                 vp.process()
