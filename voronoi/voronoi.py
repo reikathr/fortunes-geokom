@@ -12,11 +12,10 @@ class Voronoi:
         self.original_points = [] 
         self.voronoi_vertices = []
 
-        self.x0, self.x1 = 0.0, 650.0
-        self.y0, self.y1 = 0.0, 550.0
+        self.x0, self.x1 = -50.0, -50.0
+        self.y0, self.y1 = 600.0, 600.0
 
         # Insert points into site event PQ
-        points = set(points)
         for x,y in points:
             point = Point(x, y)
             self.site_events.push(point)
@@ -24,13 +23,6 @@ class Voronoi:
             self.x0, self.y0 = min(self.x0, x), min(self.y0, y)
             self.x1, self.y1 = max(self.x1, x), max(self.y1, y)
         
-        # Add margins to the bounding box
-        dx, dy = (self.x1 - self.x0 + 1) / 5.0, (self.y1 - self.y0 + 1) / 5.0
-        self.x0 -= dx
-        self.x1 += dx
-        self.y0 -= dy
-        self.y1 += dy
-
         # Create handlers
         self.site_handler = SiteEventHandler(self)
         self.circle_handler = CircleEventHandler(self)
