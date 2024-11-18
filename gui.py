@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from voronoi.voronoi import Voronoi
 
 class MainWindow:
-    RADIUS, LOCK_FLAG, CANVAS_WIDTH, CANVAS_HEIGHT, BUTTON_WIDTH = 3, False, 600, 500, 25
+    RADIUS, LOCK_FLAG, CANVAS_WIDTH, CANVAS_HEIGHT, BUTTON_WIDTH = 3, False, 650, 500, 25
     
     def __init__(self, master):
         self.master = master
