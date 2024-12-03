@@ -1,6 +1,5 @@
-import math
 from typing import List, Tuple
-from voronoi.datatypes import Point, CircleEvent, Arc, Segment, PriorityQueue
+from voronoi.datatypes import Point, Segment, PriorityQueue
 from voronoi.event_handler import SiteEventHandler, CircleEventHandler
 
 class Voronoi:

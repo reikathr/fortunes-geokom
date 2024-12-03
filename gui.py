@@ -58,7 +58,7 @@ class MainWindow:
                 collinear_count[f"x_{x}"] += 1
                 collinear_count[f"y_{y}"] += 1
 
-            too_collinear = any(amount > len(self.points_set)/2 for amount in collinear_count.values())
+            too_collinear = any(amount > len(set(self.points))/2 for amount in collinear_count.values())
 
             points = self.points
             if not too_collinear:
