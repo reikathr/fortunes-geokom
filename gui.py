@@ -22,7 +22,7 @@ class MainWindow:
         self.frmMain = tk.Frame(self.master, relief=tk.RAISED, borderwidth=1)
         self.frmMain.pack(fill=tk.BOTH, expand=1)
 
-        self.w = tk.Canvas(self.frmMain, width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT, bg='white')
+        self.w = tk.Canvas(self.frmMain, width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT, bg='#f1ead1')
         self.w.bind('<Button-1>', self.onClick)
         self.w.pack()
 
@@ -37,7 +37,7 @@ class MainWindow:
         ]
         
         for i, (text, command) in enumerate(buttons):
-            button = tk.Button(self.frmButton, text=text, width=self.BUTTON_WIDTH, command=command)
+            button = tk.Button(self.frmButton, text=text, width=self.BUTTON_WIDTH, command=command, bg='#097d4c', fg='white')
             button.grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
 
         self.frmButton.grid_columnconfigure(tuple(range(len(buttons))), weight=1)
@@ -129,18 +129,18 @@ class MainWindow:
             self.points = sorted(self.points, key=lambda point: (point[0], point[1]))
             
             for x, y in self.points:
-                self.w.create_oval(x-self.RADIUS, y-self.RADIUS, x+self.RADIUS, y+self.RADIUS, fill="black")
+                self.w.create_oval(x-self.RADIUS, y-self.RADIUS, x+self.RADIUS, y+self.RADIUS, fill="#000000")
             
             if error_messages:
                 messagebox.showerror("Input Error", "The following errors occurred:\n\n" + "\n".join(error_messages))
 
     def drawLinesOnCanvas(self, segments):
         for s in segments:
-            self.w.create_line(*s, fill='purple', tags="segments")
+            self.w.create_line(*s, fill='#097d4c', tags="segments")
 
     def drawCircleOnCanvas(self, largest_circle):
         for ox, oy, radius in largest_circle:
-            self.w.create_oval(ox - radius, oy - radius, ox + radius, oy + radius, outline="red", width=2, tags="circle")
+            self.w.create_oval(ox - radius, oy - radius, ox + radius, oy + radius, outline="#004ead", width=2, tags="circle")
 
 def main(): 
     root = tk.Tk()
