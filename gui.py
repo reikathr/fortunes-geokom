@@ -31,6 +31,7 @@ class MainWindow:
         
         buttons = [
             ('Calculate', self.onClickCalculate),
+            ('Calculate with Noise', self.onClickCalculateWithNoise),
             ('Clear', self.onClickClear),
             ('Load Points', self.onClickLoad)
         ]
@@ -52,19 +53,33 @@ class MainWindow:
             self.LOCK_FLAG = True
             self.w.delete("segments", "circle")
 
-            collinear_count = Counter()
-
-            for x, y in self.points:
-                collinear_count[f"x_{x}"] += 1
-                collinear_count[f"y_{y}"] += 1
-
-            too_collinear = any(amount > len(self.points_set)/2 for amount in collinear_count.values())
-
             points = self.points
-            if not too_collinear:
-                points = [(x, y + 1e-9 * randint(1,i+1)) for i, (x, y) in enumerate(self.points)]
-            else:
-                points = [(x, y) for (x, y) in self.points]
+            
+            try:
+                vp = Voronoi(points)
+                vp.process()
+                segments = vp.get_segments()
+                if segments:
+                    self.drawLinesOnCanvas(segments)
+
+                largest_circle = vp.find_largest_empty_circle()
+                if largest_circle:
+                    self.drawCircleOnCanvas(largest_circle)
+            except Exception as e:
+                messagebox.showerror("Calculation Error", f"An error occurred during calculation:\n\n{e}")
+            finally:
+                self.LOCK_FLAG = False
+
+    def onClickCalculateWithNoise(self):
+        if not self.points:
+            messagebox.showwarning("No Points", "No points to calculate Voronoi diagram")
+            return
+
+        if not self.LOCK_FLAG:
+            self.LOCK_FLAG = True
+            self.w.delete("segments", "circle")
+            points = [(x, y + 1e-9 * randint(1,i+1)) for i, (x, y) in enumerate(self.points)]
+            
             try:
                 vp = Voronoi(points)
                 vp.process()
